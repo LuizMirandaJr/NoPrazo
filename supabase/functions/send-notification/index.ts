@@ -1,7 +1,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const RESEND_API_KEY = 're_9uwBJcsf_45krArny2M36fYNc4PX7Zbiv';
 
 Deno.serve(async (req) => {
     // Handle CORS
