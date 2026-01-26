@@ -16,7 +16,13 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
+        });
         if (error) throw error;
         alert('Confirme seu e-mail para ativar sua conta!');
       } else {
@@ -34,6 +40,9 @@ export const LoginPage: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
       });
       if (error) throw error;
     } catch (err: any) {
