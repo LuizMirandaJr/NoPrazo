@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../services/supabase';
+import { getSiteUrl } from '../utils/url';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export const LoginPage: React.FC = () => {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin
+            emailRedirectTo: getSiteUrl()
           }
         });
         if (error) throw error;
@@ -41,7 +42,7 @@ export const LoginPage: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: getSiteUrl()
         }
       });
       if (error) throw error;
