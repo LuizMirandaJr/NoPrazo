@@ -159,7 +159,7 @@ export const EditContract: React.FC<EditContractProps> = ({ contractId, onNaviga
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-black uppercase tracking-widest text-slate-500">Fornecedor / Parte</label>
+                        <label className="text-sm font-black uppercase tracking-widest text-slate-500">Responsável</label>
                         <input
                             type="text"
                             required

@@ -226,5 +226,77 @@ export const contractService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async checkAndProcessRenewals(): Promise<void> {
+        try {
+            const { data: contracts, error } = await supabase
+                .from('contracts')
+                .select('*')
+                .eq('auto_renewal', true)
+                .neq('status', 'Cancelado'); // Don't renew cancelled contracts
+
+            if (error) throw error;
+            if (!contracts || contracts.length === 0) return;
+
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+
+            for (const contract of contracts) {
+                const endDate = new Date(contract.end_date);
+                endDate.setHours(0, 0, 0, 0);
+
+                // If expired or expiring today/passed
+                if (now >= endDate) {
+                    const startDate = new Date(contract.start_date);
+
+                    // Calculate duration in ms
+                    const durationTime = endDate.getTime() - startDate.getTime();
+
+                    // New Start Date is the day after the old end date, or just the old end date if we want continuity
+                    // Usually renewals start day after. Let's say: New Start = Old End Date + 1 day? 
+                    // Or if simple cycle: New Start = Old End Date.
+                    // User said: "reativar o contrato considerando a mesma quantidade de dias"
+
+                    const newStartDate = new Date(endDate); // Start next period from where it ended
+                    const newEndDate = new Date(newStartDate.getTime() + durationTime);
+                    const newRenewalDate = new Date(newEndDate); // Assuming renewal date matches end date usually? Or keep same specific renewal date relative logic? 
+                    // Let's assume renewal date updates to specific logic or just end date. 
+                    // Existing logic uses renewal_date as a separate field. Let's make it null or update it to end date.
+
+                    console.log(`Renewing contract ${contract.id}:`, {
+                        oldEnd: contract.end_date,
+                        newStart: newStartDate,
+                        newEnd: newEndDate
+                    });
+
+                    // Update contract in DB
+                    const { error: updateError } = await supabase
+                        .from('contracts')
+                        .update({
+                            start_date: newStartDate.toISOString(),
+                            end_date: newEndDate.toISOString(),
+                            status: 'Ativo',
+                            renewal_date: newEndDate.toISOString() // Update renewal date to new end
+                        })
+                        .eq('id', contract.id);
+
+                    if (updateError) {
+                        console.error('Error renewing contract:', updateError);
+                        continue;
+                    }
+
+                    // Record history
+                    await this.recordHistory(contract.id, 'renewed', {
+                        message: 'Renovação automática realizada pelo sistema',
+                        previous_end_date: contract.end_date,
+                        new_end_date: newEndDate.toISOString()
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Failed to process auto-renewals:', err);
+        }
     }
 };
+

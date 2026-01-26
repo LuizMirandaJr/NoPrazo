@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { AppState, Page, Contract } from './types';
+import { AppState, Page, Contract, Notification } from './types';
 import { AVATARS } from './constants';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
@@ -13,6 +13,7 @@ import { EditContract } from './pages/EditContract';
 import { Settings } from './pages/Settings';
 import { supabase } from './services/supabase';
 import { contractService } from './services/contractService';
+import { notificationService } from './services/notificationService';
 
 export default function App() {
   const [state, setState] = useState<AppState>({
@@ -24,12 +25,15 @@ export default function App() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const fetchContracts = useCallback(async () => {
     try {
       const contracts = await contractService.getAll();
       setState(prev => ({ ...prev, contracts }));
+      setNotifications(notificationService.getNotifications(contracts));
     } catch (error) {
       console.error('Error fetching contracts:', error);
     }
@@ -54,7 +58,7 @@ export default function App() {
       if (session) {
         fetchProfile(session.user.id, session.user.email!);
         setState(prev => ({ ...prev, currentPage: 'dashboard' }));
-        fetchContracts();
+        contractService.checkAndProcessRenewals().then(() => fetchContracts());
       }
       setIsLoading(false);
     });
@@ -88,10 +92,11 @@ export default function App() {
 
   const filteredContracts = useMemo(() =>
     state.contracts.filter(c =>
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.customerEmail?.toLowerCase().includes(searchQuery.toLowerCase()) || false)
-    ), [state.contracts, searchQuery]
+      (statusFilter ? c.status === statusFilter : true) &&
+      (c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.customerEmail?.toLowerCase().includes(searchQuery.toLowerCase()) || false))
+    ), [state.contracts, searchQuery, statusFilter]
   );
 
   const toggleDarkMode = () => {
@@ -125,15 +130,40 @@ export default function App() {
           onSearchChange={setSearchQuery}
           isDarkMode={isDarkMode}
           onToggleDarkMode={toggleDarkMode}
+          notifications={notifications}
+          onNotificationClick={(contractId) => {
+            if (contractId) {
+              handleNavigate('details', contractId);
+            }
+          }}
         />
 
         <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark custom-scrollbar">
           {state.currentPage === 'dashboard' && (
-            <Dashboard contracts={state.contracts} onNavigate={handleNavigate} />
+            <Dashboard
+              contracts={state.contracts}
+              onNavigate={(page, id) => {
+                handleNavigate(page as Page, id);
+                if (page === 'list') {
+                  // Reset filter if navigating normally, but dashboard will handle specific filter clicks
+                  setStatusFilter(null);
+                }
+              }}
+              onFilterSelect={(status) => {
+                setStatusFilter(status);
+                handleNavigate('list');
+              }}
+            />
           )}
 
           {state.currentPage === 'list' && (
-            <ContractList contracts={filteredContracts} onNavigate={handleNavigate} onRefresh={fetchContracts} />
+            <ContractList
+              contracts={filteredContracts}
+              onNavigate={handleNavigate}
+              onRefresh={fetchContracts}
+              activeFilter={statusFilter}
+              onFilterChange={setStatusFilter}
+            />
           )}
 
           {state.currentPage === 'details' && selectedContract && (

@@ -8,8 +8,14 @@ export const emailService = {
             });
 
             if (error) {
-                console.error('Edge Function Error:', error);
-                throw error;
+                console.error('Edge Function Error Details:', error);
+                throw new Error(`Edge Function failed: ${error.message || JSON.stringify(error)}`);
+            }
+
+            // Check if the function returned an error in the data body (e.g. 400 from Resend)
+            if (data && data.error) {
+                console.error('Resend API Error:', data.error);
+                throw new Error(`Resend API Error: ${data.error}`);
             }
 
             return data;

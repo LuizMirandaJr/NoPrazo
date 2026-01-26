@@ -33,10 +33,20 @@ export interface ContractHistory {
   id: string;
   contract_id: string;
   user_id: string;
-  action: 'created' | 'updated' | 'deleted';
+  action: 'created' | 'updated' | 'deleted' | 'renewed';
   changes: any;
   created_at: string;
   user_name?: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'warning' | 'info' | 'error' | 'success';
+  date: Date;
+  read: boolean;
+  contractId?: string;
 }
 
 export type Page = 'login' | 'dashboard' | 'list' | 'create' | 'details' | 'edit' | 'settings';

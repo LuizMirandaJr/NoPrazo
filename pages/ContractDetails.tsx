@@ -4,6 +4,7 @@ import { Contract, ContractHistory, Page } from '../types';
 import { gemini } from '../services/gemini';
 import { contractService } from '../services/contractService';
 import { emailService } from '../services/emailService';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { DEFAULT_EMAIL_TEMPLATE } from '../constants';
 
 interface ContractDetailsProps {
@@ -19,6 +20,7 @@ export const ContractDetails: React.FC<ContractDetailsProps> = ({ contract, onBa
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -191,6 +193,25 @@ export const ContractDetails: React.FC<ContractDetailsProps> = ({ contract, onBa
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={async () => {
+          try {
+            await contractService.delete(contract.id);
+            onNavigate('list');
+          } catch (err) {
+            alert('Erro ao excluir contrato');
+            console.error(err);
+          }
+        }}
+        title="Excluir Contrato"
+        message="Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita e todo o histórico será perdido."
+        confirmText="Excluir"
+        isDestructive={true}
+      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
@@ -414,7 +435,10 @@ export const ContractDetails: React.FC<ContractDetailsProps> = ({ contract, onBa
                 {loadingHistory ? 'Carregando...' : 'Histórico de Alterações'}
               </button>
 
-              <button className="w-full py-3 px-4 rounded-2xl border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all text-sm font-bold flex items-center gap-3">
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="w-full py-3 px-4 rounded-2xl border border-red-500/50 text-red-400 hover:bg-red-500/10 transition-all text-sm font-bold flex items-center gap-3"
+              >
                 <span className="material-symbols-outlined text-xl">delete</span>
                 Excluir Contrato
               </button>
